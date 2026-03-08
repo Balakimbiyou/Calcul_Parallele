@@ -32,4 +32,3 @@ if com.name == "Slaves" :
     print("Slave n :", slvs_rank)
     print("Number of slaves :", slvs_size)
 
-    a

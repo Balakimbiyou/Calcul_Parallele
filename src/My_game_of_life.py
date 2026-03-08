@@ -101,21 +101,16 @@ class Grille:
         return diff_cells
     
     def modify(self, diff):
-	    """
-	    Parameters
-	    ----------
-	    diff : TYPE
-		Modifies Indicated Cells.
-	    Returns
-	    -------
-	    None.
-	    """
-	    nx = self.dimensions[1]
-	    for c in diff:
-             nr = c//nx 
-             nc = c%nx 
-             self.cells[nr,nc] = (1 -self.cells[nr,nc] ) 
-	    return None
+        """
+        Cette fonction modifie la valeur des cellules indiquées dans la liste diff
+        """
+        nx = self.dimensions[1]
+        for c in diff:
+            nr = c//nx 
+            nc = c%nx 
+            self.cells[nr,nc] = (1 -self.cells[nr,nc] )
+            
+        return None
  
 class App:
     """
