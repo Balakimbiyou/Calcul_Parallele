@@ -51,12 +51,15 @@ if com.name == "Slaves" :
     nbp_sl  = com.Get_size()
 
     local_size = grid_size // nbp_sl + 1 if rank_sl < grid_size % nbp_sl else grid_size // nbp_sl
+    print("I am ", rank, "and I have local size ", local_size)
     grid_start = (rank_sl) * (grid_size // nbp_sl) + min(rank_sl, grid_size % nbp_sl)
 
 
     local_grid = np.zeros((local_size + 2, grid_size))
+
+    print("I am ", rank, "and I have local grid of shape ", local_grid.shape)
     if rank_sl == 0:
-        local_grid[1] = np.ones(grid_size)  # Initialize the first row of the first slave to 1 for testing
+        #local_grid[1] = np.ones(grid_size)  # Initialize the first row of the first slave to 1 for testing
         local_grid = np.ones((local_size + 2, grid_size))  # Initialize the ghost row above the first row to 0
     if rank_sl == nbp_sl - 1:
         local_grid[-2] = -1*np.ones(grid_size)  # Initialize the last row of the last slave to 1 for testing
@@ -70,7 +73,7 @@ import pygame  as pg
 
 CarryOn = True 
 pg.init()
-while CarryOn and step < 1000 : 
+while CarryOn and step < 100 : 
 
 
     if com.name == "Slaves" :
@@ -78,7 +81,7 @@ while CarryOn and step < 1000 :
         new_grid = com.gather(local_grid[1:-1], root =0) 
 
     if rank == 1:
-        n_grid = np.array(new_grid)
+        n_grid = np.concatenate(new_grid)
         n_grid = n_grid.reshape((grid_size, grid_size))
         globCom.send(n_grid, dest=0, tag=300)  # Send the full grid to the first slave for visualization  
         
