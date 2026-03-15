@@ -51,16 +51,20 @@ class Grille:
         self.start_loc = rank * self.dimensions_loc[0] + (dim[0]%nbp if rank >= dim[0]%nbp else 0)
 
         if init_pattern is not None:
+            print("init_pattern", init_pattern)
             self.cells = np.zeros((self.dimensions_loc[0]+2,self.dimensions_loc[1]), dtype=np.uint8)
             indices_i = [v[0]-self.start_loc+1 for v in init_pattern 
                          if v[0] >= self.start_loc and v[0] < self.start_loc+self.dimensions_loc[0]]
             indices_j = [v[1] for v in init_pattern]
+            print("indices_i", indices_i," indices_j", indices_j)
             if len(indices_i) > 0:
                 self.cells[indices_i,indices_j] = 1
+            print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
             self.cells = np.random.randint(2, size=dim, dtype=np.uint8)
         self.col_life = color_life
         self.col_dead = color_dead
+        #print("Live cells :", np.where(self.cells == 1))
 
     def compute_next_iteration(self):
         """
@@ -181,12 +185,14 @@ if __name__ == '__main__':
         sendcounts = np.array(newCom.gather(grid.cells[1:-1,:].size, root=0))
 
         loop = True
-        while loop:
-            #time.sleep(0.1) # A régler ou commenter pour vitesse maxi
+        count = 0
+        while loop and count < 10:
+            time.sleep(0.1) # A régler ou commenter pour vitesse maxi
             t1 = time.time()
             diff = grid.compute_next_iteration()
             grid.update_ghost_cells()
             t2 = time.time()
+            print(f"rank {rank} : Live cells :", np.where(grid.cells == 1))
             newCom.Gatherv(grid.cells[1:-1,:], [grid_glob, sendcounts], root=0)
             if newCom.rank == 0:
                 if (globCom.Iprobe(source=0)):
@@ -196,4 +202,6 @@ if __name__ == '__main__':
                     else:
                         globCom.send(grid_glob, dest=0)
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
+            #loop = False
+            #count += 1
 

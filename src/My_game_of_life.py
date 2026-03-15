@@ -47,7 +47,7 @@ class Grille:
     """
     def __init__(self, dim, init_pattern=None, color_life=pg.Color("black"), color_dead=pg.Color("white")):
         #import random
-
+        
         self.dimensions = dim
         ny_loc = dim[0]//nbp + ( 1 if rank < dim[0]%nbp else 0)
         y_start = ny_loc*rank + (dim[0]%nbp if rank >= dim[0]%nbp else 0)
