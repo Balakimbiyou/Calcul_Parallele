@@ -87,6 +87,23 @@ class Grille:
         req1.Wait()
         req2.Wait()
 
+    def modify(self, diff): 
+        """
+        Parameters 
+        ------------
+        diff : TYPE 
+            Modifies Indicated Cells.
+        Returns 
+        ------------
+        None
+        """
+        nx = self.dimensions[1]
+        for c in diff :
+            nr = c //nx 
+            nc = c % nx 
+            self.cells[nr,nc] = (1 - self.cells[nr,nc])
+        return None 
+
 class App:
     """
     Cette classe décrit la fenêtre affichant la grille à l'écran

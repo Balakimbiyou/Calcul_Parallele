@@ -6,23 +6,16 @@ rank = comm.Get_rank()
 
 import numpy as np
 
-a_loc = np.zeros((6,3), dtype=np.int32, order= "C")
+a_loc = np.zeros((3,3), dtype=np.int32, order= "C")
 a_loc[1,0] = 5
 print("ndim a_loc", np.ndim(a_loc))
-
-count = 6
-blocklength = 3
-stride = rank
-
-column_type = MPI.INT64_T.Create_vector(count = count,blocklength = blocklength,stride = stride)
-column_type.Commit()
 
 print("rank", rank, "a_loc : Live cells :", a_loc)
 
 grid_glob = None
 if rank == 0:
-   grid_glob = np.zeros((6,size*3), dtype=np.int32)
-   #grid_glob = np.zeros((size,6,3), dtype=np.int32)
+   #grid_glob = np.zeros((6,6), dtype=np.int32)
+   grid_glob = np.zeros((size,3,3), dtype=np.int32)
    print("ndim grid_glob", np.ndim(grid_glob))
    print("np.shape(grid_glob)", np.shape(grid_glob))
 
@@ -31,7 +24,7 @@ for i in range(len(np.shape(a_loc))):
 
 sendcounts = np.array(comm.gather(a_loc.size, root=0))
 
-comm.Gatherv([a_loc, 1, column_type], [grid_glob, sendcounts], root=0)
+comm.Gatherv(a_loc, [grid_glob, sendcounts], root=0)
 if rank == 0:
     #print("np.shape(grid_glob)", np.shape(grid_glob))
     #a,b,c = np.shape(grid_glob)
