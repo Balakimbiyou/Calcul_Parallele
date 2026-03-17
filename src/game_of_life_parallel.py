@@ -99,19 +99,10 @@ class Grille:
         None
         """
         nx = self.dimensions[1]
-        cells_bef = self.cells
-        #print("Modify diff", diff)
-        #print("cells.shape :", self.cells.shape)
         for c in diff :
-            #nr = c //nx 
-            #nc = c % nx
-            nr = c[0]
-            nc = c[1] 
-            #print("self.cells[nr,nc]:",self.cells[:,nc].shape)
+            nr = c //nx 
+            nc = c % nx
             self.cells[nr,nc] = (1 - self.cells[nr,nc])
-            #print("self.cells[nr,nc] aft :",self.cells[nr,nc])
-        cells_after = self.cells 
-        #print("cells.bef == cells.after :", (cells_bef == cells_after).all())
         return None 
 
 class App:
@@ -153,6 +144,7 @@ if __name__ == '__main__':
     import time
     import sys
 
+    #initialisation de différents patterns possibles pour le jeu de la vie
     dico_patterns = { # Dimension et pattern dans un tuple
         'blinker' : ((5,5),[(2,1),(2,2),(2,3)]),
         'toad'    : ((6,6),[(2,2),(2,3),(2,4),(3,3),(3,4),(3,5)]),
@@ -184,93 +176,68 @@ if __name__ == '__main__':
     except KeyError:
         print("No such pattern. Available ones are:", dico_patterns.keys())
         exit(1)
+
+    #Partie du Maitre 
     if rank == 0:
         pg.init()
         grid = Grille(0, 1, *init_pattern)
         appli = App((resx, resy), grid)
+
+        #
         loop = True
-        diff = None
-        count = 0
-        while loop and count < 10:
-            globCom.send(1, dest=1)
-            ap = appli.grid.cells
-            appli.grid.modify(globCom.recv(source=1))
-            print("appli :", (ap == appli.grid.cells).all())
-            #appli.grid.cells[1:-1,:] = grid.cells[1:-1,:]
-            #print("rank global : ", rank, "rank local : ", newCom.rank, "nb de processus locaux : ", newCom.size)
-            #for i in range(1, newCom.size):
-            #        diff_cells = globCom.Recv(source = i, tag = 100 + i) # Recv
-            #        print("diff_cells", diff_cells)
-            #        if diff_cells is not None:
-            #            print("diff_cells", diff_cells)
-            #            grid.modify(diff_cells)
+        diff = None # listes des cellules à modifier pour la prochaine itération. Initialisation sur tous les processeurs
+        count = 0 # debug 
+        while loop and count < 100:
+            globCom.send(1, dest=1) # message de synchronisation. A tester si on peut enlever
+
+            appli.grid.modify(globCom.recv(source=1)) # réception des céllules à modifier et modification de la grille
+
             t2 = time.time()
-            appli.draw()
+            appli.draw() # affichage de la grille à l'écran
             t3 = time.time()
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     loop = False
                     pg.quit()
                     globCom.send(-1,dest=1)
-            #print(f"Temps affichage : {t3-t2:2.2e} secondes", flush=True)
+            print(f"Temps affichage : {t3-t2:2.2e} secondes", flush=True)
             #count += 1
+
     else:
         grid = Grille(newCom.rank, newCom.size, *init_pattern)
-        grid.update_ghost_cells()
-        #print(f"rank loc : {newCom.rank}, cells locales : \n{grid.cells.T}")
-
-        #grid_glob = None
-        #if newCom.rank == 0:
-        #    grid_glob = np.zeros(init_pattern[0], dtype=np.uint8)
-        #sendcounts = np.array(newCom.gather(grid.cells[1:-1,:].size, root=0))
-        #print("sendcounts", sendcounts)
+        grid.update_ghost_cells() # mise à jour des cellules fantômes
 
         loop = True
         count = 0
-        diff_glob = None
+        diff_glob = None #liste des listes des cellules à modifier par processeur.
         if newCom.rank == 0:
-            diff_glob = np.zeros(init_pattern[0], dtype=np.uint8)
             diff_glob = []
+        
         while loop and count < 10:
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
             t1 = time.time()
-            diff = grid.compute_next_iteration()
-            diff = np.where(diff)
-            print("diff", diff)
+            diff = grid.compute_next_iteration()# liste des cellules à modifier pour la prochaine itération. Calcul sur tous les processeurs
+            diff = np.where(diff)# indices des cellules à modifier
+            print("diff", diff, "grid.start_loc:", grid.start_loc, "rank :", rank)
+
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = np.zeros((diff[0].shape[0],2), dtype=np.uint32)
-                diff_send[:,0] = diff[0] + grid.start_loc
-                diff_send[:,1] = diff[1] 
-            sendcounts = np.array([diff[0].shape[0]] * newCom.size)
-            #print("sendcounts", sendcounts)
-            #diff_send = np.empty((1,2), dtype=np.uint32)
-            #print(f"rank {rank} : diff cells :", diff)
-            #if diff[0].shape != (0,):
-                #print(f"rank {rank} : diff cells :", diff[0].shape)
-                #diff_send = np.zeros((diff[0].shape[0],2), dtype=np.uint32)
-                #print("diff_send", diff_send.shape)
-                #diff_send[:,0] = diff[0]
-                #diff_send[:,1] = diff[1]
-            grid.update_ghost_cells()
+                diff_send = (grid.start_loc+ diff[0])*grid.dimensions_loc[1] + diff[1]
+            grid.update_ghost_cells() # mise à jour des cellules fantômes à chaque itération
             t2 = time.time()
-            #print(f"rank {rank} : Live cells :", np.where(grid.cells == 1))
-            #print("diff_send :", diff_send)
-            #globCom.Send(diff_send, dest = 0, tag = 100 + rank) # Send
-            #globCom.Barrier()
             
-            diff_glob = newCom.gather(diff_send, root=0)
+            diff_glob = newCom.gather(diff_send, root=0) #regroupement des cellules à modifier sur le processeur 1. Petit gather pour envois sérialisé. Peut-être pas le plus opti.
+            
             if newCom.rank == 0:
-
-                difffg = [x for xs in diff_glob for x in xs ]
-                diff_glob = np.array(difffg, dtype=np.uint32)
-                print("diff_glob", diff_glob)
+                diff_index = [x for xs in diff_glob for x in xs ] # Rassemblement des indices à modifier par proc en une seule liste
+                diff_glob = np.unique(diff_index) #unique array pour éviter 
+                print("diff_glob2", diff_glob)
                 if (globCom.Iprobe(source=0)):
-                    a = globCom.recv(source=0)
+                    a = globCom.recv(source=0) 
                     if a==-1:
                         loop = False
                     else:
-                        globCom.send(diff_glob, dest=0)
+                        globCom.send(diff_glob, dest=0)#envois classique bloquant. Peut tenter non bloquant pour tenter d'accélerer le code, attention aux modifs possibles de la liste.
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
             #loop = False
             #count += 1
