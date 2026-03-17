@@ -219,11 +219,11 @@ if __name__ == '__main__':
         grid.update_ghost_cells()
         #print(f"rank loc : {newCom.rank}, cells locales : \n{grid.cells.T}")
 
-        grid_glob = None
-        if newCom.rank == 0:
-            grid_glob = np.zeros(init_pattern[0], dtype=np.uint8)
-        sendcounts = np.array(newCom.gather(grid.cells[1:-1,:].size, root=0))
-        print("sendcounts", sendcounts)
+        #grid_glob = None
+        #if newCom.rank == 0:
+        #    grid_glob = np.zeros(init_pattern[0], dtype=np.uint8)
+        #sendcounts = np.array(newCom.gather(grid.cells[1:-1,:].size, root=0))
+        #print("sendcounts", sendcounts)
 
         loop = True
         count = 0
@@ -243,7 +243,7 @@ if __name__ == '__main__':
                 diff_send[:,0] = diff[0] + grid.start_loc
                 diff_send[:,1] = diff[1] 
             sendcounts = np.array([diff[0].shape[0]] * newCom.size)
-            print("sendcounts", sendcounts)
+            #print("sendcounts", sendcounts)
             #diff_send = np.empty((1,2), dtype=np.uint32)
             #print(f"rank {rank} : diff cells :", diff)
             #if diff[0].shape != (0,):
