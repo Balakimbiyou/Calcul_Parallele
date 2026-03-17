@@ -63,10 +63,8 @@ class Grille:
                 self.cells[indices_i,indices_j] = 1            
             print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
-            #self.cells = np.random.randint(2, size=dim, dtype=np.uint8)
-            #print(f"rank {rank} : tirage aléatoire des cellules vivantes et mortes")
             self.cells = np.array(np.random.randint(2, size=dim, dtype=np.uint8))
-            #self.cells = np.ascontiguousarray(self.cells)
+
         self.col_life = color_life
         self.col_dead = color_dead
 
@@ -82,24 +80,23 @@ class Grille:
 
     def update_ghost_cells(self):
         """
-        Met à jour les cellules fantômes
+        Met à jour les cellules fantômes. Pas comme pour les lignes. Les envois et réception nécessitent des arrays contigus ce qui n'est pas le cas des colonnes.
+        Utilisation d'array temp en attendant. A optimiser.  
         """
         col_1_temp = np.ascontiguousarray(self.cells[:,-2])
         col_m2_temp = np.ascontiguousarray(self.cells[:, 1])
-        print("rank :", rank,"self.cells[:,-2] :", col_m2_temp)
-        print("rank :", rank,"self.cells[:,1] :", col_1_temp)
+        #print("rank :", rank,"self.cells[:,-2] :", col_m2_temp)
+        #print("rank :", rank,"self.cells[:,1] :", col_1_temp)
         req1 = newCom.Isend(col_m2_temp, dest = (newCom.rank+1)%newCom.size, tag=102)
         req2 = newCom.Isend(col_1_temp, dest = (newCom.rank+newCom.size-1)%newCom.size, tag=101)
         col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint8)
         col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint8)
         newCom.Recv(col_0_temp, source = (newCom.rank+1)%newCom.size, tag=101)
         newCom.Recv(col_m1_temp, source = (newCom.rank+newCom.size-1)%newCom.size, tag=102)
-        #print("self.cells.shape :", self.cells.shape)
-        #print("col_1_temp.shape :", self.cells[:,-1].shape)
         self.cells[:,-1] = col_m1_temp
         self.cells[:,0] = col_0_temp
-        print("rank :", rank,"self.cells[:,-1] :", col_m1_temp)
-        print("rank :", rank,"self.cells[:,0] :", col_0_temp)
+        #print("rank :", rank,"self.cells[:,-1] :", col_m1_temp)
+        #print("rank :", rank,"self.cells[:,0] :", col_0_temp)
         req1.Wait()
         req2.Wait()
     
@@ -114,19 +111,14 @@ class Grille:
         None
         """
         nx = self.dimensions[1]
-        cells_bef = self.cells
-        #print("Modify diff", diff)
-        #print("cells.shape :", self.cells.shape)
+        print("nx :", nx)
         for c in diff :
-            #nr = c //nx 
-            #nc = c % nx
-            nr = c[0]
-            nc = c[1] 
-            #print("self.cells[nr,nc]:",self.cells[:,nc].shape)
+            nr = c //nx 
+            nc = c % nx
+            print("c :", c)
+            print("nr :", nr)
+            print("nc :", nc)
             self.cells[nr,nc] = (1 - self.cells[nr,nc])
-            #print("self.cells[nr,nc] aft :",self.cells[nr,nc])
-        cells_after = self.cells 
-        #print("cells.bef == cells.after :", (cells_bef == cells_after).all())
         return None 
 
 class App:
@@ -203,15 +195,14 @@ if __name__ == '__main__':
         pg.init()
         grid = Grille(0, 1, *init_pattern)
         appli = App((resx, resy), grid)
+
         loop = True
         diff = None 
         count = 0
+
         while loop and count < 10:
             globCom.send(1, dest=1)
-            ap = appli.grid.cells
             appli.grid.modify(globCom.recv(source=1))
-            print("appli :", (ap == appli.grid.cells).all())
-            print("Live cells :", np.where(grid.cells == 1))
             t2 = time.time()
             appli.draw()
             t3 = time.time()
@@ -220,50 +211,37 @@ if __name__ == '__main__':
                     loop = False
                     pg.quit()
                     globCom.send(-1,dest=1)
-            #print(f"Temps affichage : {t3-t2:2.2e} secondes", flush=True)
+            print(f"Temps affichage : {t3-t2:2.2e} secondes", flush=True)
     else:
         grid = Grille(newCom.rank, newCom.size, *init_pattern)
         grid.update_ghost_cells()
-        print(f"rank loc : {newCom.rank}, cells locales : \n{grid.cells.T}")
-
-        grid_glob = None
-        nb_of_cols = np.array(newCom.gather(grid.dimensions_loc[1], root=0))
-        if newCom.rank == 0:
-            #grid_glob = np.zeros((newCom.size, init_pattern[0][0], init_pattern[0][1]), dtype=np.uint8, order='C')
-            #grid_glob = np.zeros(init_pattern[0], dtype=np.uint8, order='C')
-            #grid_glob = np.ascontiguousarray(grid_glob)
-            grid_glob = np.array([np.zeros((grid.dimensions_loc[0], grid.dimensions_loc[1]), dtype=np.uint8) for _ in range(newCom.size)], order='C')
-            print("grid_glob.shape", grid_glob.shape)
-        sendcounts = np.array(newCom.gather(grid.cells[:,1:-1].size, root=0))
-        #nb_of_cols = np.array(newCom.gather(grid.dimensions_loc[1], root=0))
 
         loop = True
         count = 0 
         diff_glob = None
         if newCom.rank == 0:
-            diff_glob = np.zeros(init_pattern[0], dtype=np.uint8)
             diff_glob = []
         while loop and count < 10:
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
+
             t1 = time.time()
             diff = grid.compute_next_iteration()
             diff = np.where(diff)
-            print("diff", diff)
+            print("diff", diff, "grid.start_loc:", grid.start_loc, "rank :", rank)
+
+
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = np.zeros((diff[0].shape[0],2), dtype=np.uint32)
-                diff_send[:,0] = diff[0] 
-                diff_send[:,1] = diff[1] + grid.start_loc
-            sendcounts = np.array([diff[0].shape[0]] * newCom.size)
+                diff_send = diff[0]*(nbp-1)*grid.dimensions_loc[1] + diff[1] + grid.start_loc  # décalage en colonne comme on parallelise en colonne
             grid.update_ghost_cells()
             t2 = time.time()
-            diff_glob = newCom.gather(diff_send, root=0)
-            #print(f"rank {rank} : Live cells :", np.where(grid.cells == 1))
-            #newCom.Gatherv(np.ascontiguousarray(grid.cells[:,1:-1]), [grid_glob, sendcounts], root=0)
+
+
+            diff_glob = newCom.gather(diff_send, root=0)#sérialiser réfléchir à une optimisation
             if newCom.rank == 0:
-                difffg = [x for xs in diff_glob for x in xs ]
-                diff_glob = np.array(difffg, dtype=np.uint32)
-                print("diff_glob", diff_glob)
+                diff_index = [x for xs in diff_glob for x in xs ] # Rassemblement des indices à modifier par proc en une seule liste
+                diff_glob = np.unique(diff_index) #unique array pour éviter 
+                print("diff_glob2", diff_glob)
                 if (globCom.Iprobe(source=0)):
                     a = globCom.recv(source=0)
                     if a==-1:
@@ -273,4 +251,5 @@ if __name__ == '__main__':
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
             #count += 1
             #loop = False 
+
 

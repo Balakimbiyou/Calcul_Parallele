@@ -86,12 +86,47 @@ class Grille:
         """
         Met à jour les cellules fantômes
         """
+        ### rows 
+        req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.rank+1)%newCom.size, tag=101)
+        req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank+newCom.size-1)%newCom.size, tag=102)
+        newCom.Send(self.cells[-2,:], dest = (newCom.rank+1)%newCom.size, tag=102)
+        newCom.Send(self.cells[1,:], dest = (newCom.rank+newCom.size-1)%newCom.size, tag=101)
+        req1.Wait()
+        req2.Wait()
+
+        #### cols
         req1 = newCom.Irecv(np.ascontiguousarray(self.cells[:,-1]), source = (newCom.rank+1)%newCom.size, tag=101)
         req2 = newCom.Irecv(np.ascontiguousarray(self.cells[:,0]), source = (newCom.rank+newCom.size-1)%newCom.size, tag=102)
         newCom.Send(np.ascontiguousarray(self.cells[:,-2]), dest = (newCom.rank+1)%newCom.size, tag=102)
         newCom.Send(np.ascontiguousarray(self.cells[:, 1]), dest = (newCom.rank+newCom.size-1)%newCom.size, tag=101)
         req1.Wait()
         req2.Wait()
+
+    def modify(self, diff): 
+        """
+        Parameters 
+        ------------
+        diff : TYPE 
+            Modifies Indicated Cells.
+        Returns 
+        ------------
+        None
+        """
+        nx = self.dimensions[1]
+        cells_bef = self.cells
+        #print("Modify diff", diff)
+        #print("cells.shape :", self.cells.shape)
+        for c in diff :
+            #nr = c //nx 
+            #nc = c % nx
+            nr = c[0]
+            nc = c[1] 
+            #print("self.cells[nr,nc]:",self.cells[:,nc].shape)
+            self.cells[nr,nc] = (1 - self.cells[nr,nc])
+            #print("self.cells[nr,nc] aft :",self.cells[nr,nc])
+        cells_after = self.cells 
+        #print("cells.bef == cells.after :", (cells_bef == cells_after).all())
+        return None 
 
 class App:
     """
