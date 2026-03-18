@@ -198,6 +198,8 @@ if __name__ == '__main__':
     except KeyError:
         print("No such pattern. Available ones are:", dico_patterns.keys())
         exit(1)
+
+    
     if rank == 0:
         pg.init()
         grid = Grille(0, 1, *init_pattern)
