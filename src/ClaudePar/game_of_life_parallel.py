@@ -53,7 +53,7 @@ class Grille:
 
         if init_pattern is not None:
             print("init_pattern", init_pattern)
-            self.cells = np.zeros((self.dimensions_loc[0]+2,self.dimensions_loc[1]), dtype=np.uint16)
+            self.cells = np.zeros((self.dimensions_loc[0]+2,self.dimensions_loc[1]), dtype=np.uint8)
             indices_i = [v[0]-self.start_loc+1 for v in init_pattern 
                          if v[0] >= self.start_loc and v[0] < self.start_loc+self.dimensions_loc[0]]
             indices_j = [v[1] for v in init_pattern]
@@ -62,7 +62,7 @@ class Grille:
                 self.cells[indices_i,indices_j] = 1
             print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
-            self.cells = np.random.randint(2, size=dim, dtype=np.uint16)
+            self.cells = np.random.randint(2, size=dim, dtype=np.uint8)
         self.col_life = color_life
         self.col_dead = color_dead
         #print("Live cells :", np.where(self.cells == 1))

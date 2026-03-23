@@ -54,7 +54,7 @@ class Grille:
 
         if init_pattern is not None:
             print("init_pattern", init_pattern)
-            self.cells = np.zeros((self.dimensions_loc[0],self.dimensions_loc[1]+2), dtype=np.uint16)
+            self.cells = np.zeros((self.dimensions_loc[0],self.dimensions_loc[1]+2), dtype=np.uint8)
             indices_i = [v[0] for v in init_pattern ]
             indices_j = [v[1] - self.start_loc +1 for v in init_pattern 
                          if v[1] >= self.start_loc and v[1] < self.start_loc + self.dimensions_loc[1]]
@@ -63,7 +63,7 @@ class Grille:
                 self.cells[indices_i,indices_j] = 1            
             print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
-            self.cells = np.array(np.random.randint(2, size=dim, dtype=np.uint16))
+            self.cells = np.array(np.random.randint(2, size=dim, dtype=np.uint8))
 
         self.col_life = color_life
         self.col_dead = color_dead
@@ -87,12 +87,12 @@ class Grille:
         col_m2_temp = np.ascontiguousarray(self.cells[:, 1])
         #print("rank :", rank,"self.cells[:,-2] :", col_m2_temp)
         #print("rank :", rank,"self.cells[:,1] :", col_1_temp)
-        req1 = newCom.Isend(col_m2_temp, dest = (newCom.rank-1)%newCom.size, tag=102)
-        req2 = newCom.Isend(col_1_temp, dest = (newCom.rank+1)%newCom.size, tag=101)
-        col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
-        col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
-        newCom.Recv(col_0_temp, source = (newCom.rank-1)%newCom.size, tag=101)
-        newCom.Recv(col_m1_temp, source = (newCom.rank+1)%newCom.size, tag=102)
+        req1 = newCom.Isend(col_m2_temp, dest = (newCom.rank+1)%newCom.size, tag=102)
+        req2 = newCom.Isend(col_1_temp, dest = (newCom.rank+newCom.size-1)%newCom.size, tag=101)
+        col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint8)
+        col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint8)
+        newCom.Recv(col_0_temp, source = (newCom.rank+1)%newCom.size, tag=101)
+        newCom.Recv(col_m1_temp, source = (newCom.rank+newCom.size-1)%newCom.size, tag=102)
         self.cells[:,-1] = col_m1_temp
         self.cells[:,0] = col_0_temp
         #print("rank :", rank,"self.cells[:,-1] :", col_m1_temp)
@@ -114,7 +114,7 @@ class Grille:
         print("nx :", nx)
         for c in diff :
             nr = c //nx 
-            nc = c % nx 
+            nc = c % nx
             print("c :", c)
             print("nr :", nr)
             print("nc :", nc)
@@ -232,7 +232,7 @@ if __name__ == '__main__':
 
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = diff[0]*grid.dimensions[1] + diff[1] + grid.start_loc  # décalage en colonne comme on parallelise en colonne
+                diff_send = diff[0]*(nbp-1)*grid.dimensions_loc[1] + diff[1] + grid.start_loc  # décalage en colonne comme on parallelise en colonne
             grid.update_ghost_cells()
             t2 = time.time()
 
