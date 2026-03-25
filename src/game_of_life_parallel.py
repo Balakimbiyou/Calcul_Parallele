@@ -50,6 +50,7 @@ class Grille:
         self.dimensions = dim
         self.dimensions_loc = (dim[0]//nbp + (1 if rank < dim[0]%nbp else 0),dim[1])
         self.start_loc = rank * self.dimensions_loc[0] + (dim[0]%nbp if rank >= dim[0]%nbp else 0)
+        print("rank :", rank, "dimensions_loc :", self.dimensions_loc)
 
         if init_pattern is not None:
             print("init_pattern", init_pattern)
@@ -82,9 +83,9 @@ class Grille:
         Met à jour les cellules fantômes
         """
         req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.rank+1)%newCom.size, tag=101)
-        req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank+newCom.size-1)%newCom.size, tag=102)
+        req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank-1)%newCom.size, tag=102)
         newCom.Send(self.cells[-2,:], dest = (newCom.rank+1)%newCom.size, tag=102)
-        newCom.Send(self.cells[1,:], dest = (newCom.rank+newCom.size-1)%newCom.size, tag=101)
+        newCom.Send(self.cells[1,:], dest = (newCom.rank-1)%newCom.size, tag=101)
         req1.Wait()
         req2.Wait()
 
@@ -208,21 +209,17 @@ if __name__ == '__main__':
         grid.update_ghost_cells() # mise à jour des cellules fantômes
 
         loop = True
-        count = 0
-        diff_glob = None #liste des listes des cellules à modifier par processeur.
-        if newCom.rank == 0:
-            diff_glob = []
-        
-        while loop and count < 10:
+        while loop :
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
             t1 = time.time()
-            diff = grid.compute_next_iteration()# liste des cellules à modifier pour la prochaine itération. Calcul sur tous les processeurs
-            diff = np.where(diff)# indices des cellules à modifier
-            print("diff", diff, "grid.start_loc:", grid.start_loc, "rank :", rank)
+            diff = grid.compute_next_iteration()# liste des cellules à modifier pour la prochaine itération.Calcul sur tous les processeurs 
+            rows, cols = np.where(diff)# indices des cellules à modifier
+            mask = (rows >= 1) & ( rows  <= grid.dimensions_loc[0])
+            rows, cols = rows[mask], cols[mask]
 
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = (grid.start_loc+ diff[0])*grid.dimensions_loc[1] + diff[1]
+                diff_send = (grid.start_loc+ rows - 1)*grid.dimensions_loc[1] + cols
             grid.update_ghost_cells() # mise à jour des cellules fantômes à chaque itération
             t2 = time.time()
             
@@ -231,7 +228,6 @@ if __name__ == '__main__':
             if newCom.rank == 0:
                 diff_index = [x for xs in diff_glob for x in xs ] # Rassemblement des indices à modifier par proc en une seule liste
                 diff_glob = np.unique(diff_index) #unique array pour éviter 
-                print("diff_glob2", diff_glob)
                 if (globCom.Iprobe(source=0)):
                     a = globCom.recv(source=0) 
                     if a==-1:
@@ -239,6 +235,5 @@ if __name__ == '__main__':
                     else:
                         globCom.send(diff_glob, dest=0)#envois classique bloquant. Peut tenter non bloquant pour tenter d'accélerer le code, attention aux modifs possibles de la liste.
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
-            #loop = False
-            #count += 1
+
 

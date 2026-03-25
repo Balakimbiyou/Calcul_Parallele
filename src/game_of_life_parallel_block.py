@@ -54,29 +54,27 @@ class Grille:
             else : 
                 block_dim = (dim[0]//nbp , dim[1]//nbp)
         else :
-            #print("dim[1]%nbp :", dim[1]%nbp + dim[1]//nbp)
             block_dim = (dim[0]//nbp , dim[1]//nbp )
 
         # Find local dimensions
         if nbp % 2 == 0 :
             if rank % 2 == 0 :
                 
-                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1]) #+ (1 if rank%2 == 1 else 0 ))
+                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1])
                 if rank + 2 == nbp :
-                    self.dimensions_loc = (2*block_dim[0] + dim[0]%nbp, (nbp//2)*block_dim[1]) #+ (1 if rank%2 == 1 else 0 ))
+                    self.dimensions_loc = (2*block_dim[0] + dim[0]%nbp, (nbp//2)*block_dim[1]) 
             else : 
-                print("dim[1]%nbp :", (nbp//2)*block_dim[1] + dim[1]%nbp, "\n")
-                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + dim[1]%nbp) #+ (1 if rank%2 == 1 else 0 ))
+                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + dim[1]%nbp)
                 if rank + 1 == nbp :
-                    self.dimensions_loc = (2*block_dim[0] + dim[0]%nbp, (nbp//2)*block_dim[1] + dim[1]%nbp) #+ (1 if rank%2 == 1 else 0 ))
+                    self.dimensions_loc = (2*block_dim[0] + dim[0]%nbp, (nbp//2)*block_dim[1] + dim[1]%nbp) 
         else : 
             if rank %2 == 0:
                 if rank == nbp - 1 :
-                    self.dimensions_loc = (block_dim[0], dim[1]) #+ (1 if rank%2 == 1 else 0 )) 
+                    self.dimensions_loc = (block_dim[0], dim[1])
                 else :
-                    self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + block_dim[1]//2 ) #+ (1 if rank%2 == 1 else 0 ))
+                    self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + block_dim[1]//2 ) 
             else : 
-                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + block_dim[1]//2 + dim[1]%nbp) #+ (1 if rank%2 == 1 else 0 ))  
+                self.dimensions_loc = (2*block_dim[0], (nbp//2)*block_dim[1] + block_dim[1]//2 + dim[1]%nbp) 
 
 
         if nbp % 2 == 0 :
@@ -84,7 +82,7 @@ class Grille:
                 self.start_loc_col = 0 
                 self.start_loc_row = (rank//2)*2*block_dim[0] 
             else :
-                self.start_loc_col = (nbp//2)*block_dim[1] #+ (dim[1]%nbp if rank >= dim[1]%nbp else 0)
+                self.start_loc_col = (nbp//2)*block_dim[1] 
                 self.start_loc_row = (rank//2)*2*block_dim[0] 
 
         else : 
@@ -93,34 +91,29 @@ class Grille:
                     self.start_loc_col = 0 
                     self.start_loc_row = (rank//2)*2*block_dim[0] 
                 else :
-                    self.start_loc_col = (nbp//2)*block_dim[1] + block_dim[1]//2 #+ (dim[1]%nbp if rank >= dim[1]%nbp else 0)
+                    self.start_loc_col = (nbp//2)*block_dim[1] + block_dim[1]//2 
                     self.start_loc_row = (rank//2)*2*block_dim[0] 
             else : 
                 self.start_loc_row = 2*(rank//2)*(block_dim[0] - dim[0]%nbp)
                 self.start_loc_col = 0
             
 
-        #self.dimensions_loc = (dim[0]//nbp + (1 if rank < dim[0]%nbp else 0),dim[1]//nbp + (1 if rank < dim[1]%nbp else 0))
-        #self.start_loc_row = rank * self.dimensions_loc[0] + (dim[0]%nbp if rank >= dim[0]%nbp else 0)
-        #self.start_loc_col = rank * self.dimensions_loc[1] + (dim[1]%nbp if rank >= dim[1]%nbp else 0)
         print(f"rank {rank} : dimensions locales : {self.dimensions_loc}, start_loc_row : {self.start_loc_row}, star_loc_col : {self.start_loc_col}")
 
         if init_pattern is not None:
-            print("init_pattern", init_pattern)
-            self.cells = np.zeros((self.dimensions_loc[0],self.dimensions_loc[1]+2), dtype=np.uint8)
+            #print("init_pattern", init_pattern)
+            self.cells = np.zeros((self.dimensions_loc[0]+2,self.dimensions_loc[1]+2), dtype=np.uint8)
             indices_i = [v[0]-self.start_loc_row+1 for v in init_pattern 
                          if v[0] >= self.start_loc_row and v[0] < self.start_loc_row+self.dimensions_loc[0]]
             indices_j = [v[1] - self.start_loc_col +1 for v in init_pattern 
                          if v[1] >= self.start_loc_col and v[1] < self.start_loc_col + self.dimensions_loc[1]]
-            print("indices_i", indices_i," indices_j", indices_j)
+            #print("indices_i", indices_i," indices_j", indices_j)
             if len(indices_i) and len(indices_j) > 0:
                 self.cells[indices_i,indices_j] = 1            
-            print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
+            #print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
-            #self.cells = np.random.randint(2, size=dim, dtype=np.uint8)
             #print(f"rank {rank} : tirage aléatoire des cellules vivantes et mortes")
             self.cells = np.array(np.random.randint(2, size=dim, dtype=np.uint8))
-            #self.cells = np.ascontiguousarray(self.cells)
         self.col_life = color_life
         self.col_dead = color_dead
 
@@ -139,34 +132,63 @@ class Grille:
         Met à jour les cellules fantômes
         """
 
-        if nbp % 2 == 0 :
+        if (nbp-1) % 2 == 0 :
             ### rows
 
-            req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.rank+2)%newCom.size, tag=101)
-            req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank+newCom.size-2)%newCom.size, tag=102)
-            newCom.Send(self.cells[-2,:], dest = (newCom.rank+2)%newCom.size, tag=102)
-            newCom.Send(self.cells[1,:], dest = (newCom.rank+newCom.size-2)%newCom.size, tag=101)
+
+            down = (newCom.rank+2)%newCom.size
+            up = (newCom.rank-2)%newCom.size
+
+            req1 = newCom.Irecv(self.cells[-1,:], source = down, tag=101)
+            req2 = newCom.Irecv(self.cells[0,:], source = up, tag=102)
+            newCom.Send(self.cells[-2,:], dest = down, tag=102)
+            newCom.Send(self.cells[1,:], dest = up, tag=101)
+            req1.Wait()
+            req2.Wait()
 
             ### cols 
 
-            if rank %2 == 0 :
-                req3 = newCom.Irecv(np.ascontiguousarray(self.cells[:,-1]), source = (newCom.rank+1), tag=103)
-                req4 = newCom.Irecv(np.ascontiguousarray(self.cells[:,0]), source = (newCom.rank+1), tag=104)
-                newCom.Send(np.ascontiguousarray(self.cells[:,-2]), dest = (newCom.rank+1), tag=104)
-                newCom.Send(np.ascontiguousarray(self.cells[:, 1]), dest = (newCom.rank+1), tag=103)
-            else : 
-                req3 = newCom.Irecv(np.ascontiguousarray(self.cells[:,-1]), source = (newCom.rank-1), tag=103)
-                req4 = newCom.Irecv(np.ascontiguousarray(self.cells[:,0]), source = (newCom.rank-1), tag=104)
-                newCom.Send(np.ascontiguousarray(self.cells[:,-2]), dest = (newCom.rank-1), tag=104)
-                newCom.Send(np.ascontiguousarray(self.cells[:, 1]), dest = (newCom.rank-1), tag=103) 
+            col_1_temp = np.ascontiguousarray(self.cells[:,-2])
+            col_m2_temp = np.ascontiguousarray(self.cells[:, 1])
 
+
+            col_m1_temp = np.empty((self.dimensions_loc[0] +2), dtype=np.uint8)
+            col_0_temp = np.empty((self.dimensions_loc[0] + 2), dtype=np.uint8)
+
+            partner_col = (newCom.rank + 1) if (newCom.rank %2 ==0) else (newCom.rank -1)
+
+            if newCom.rank %2 == 0 : #left
+
+                req3 = newCom.Isend(col_m2_temp, dest = (partner_col), tag=103)
+                newCom.Recv(col_m1_temp, source = (partner_col), tag=104)
+                req3.Wait()
+
+                req4 = newCom.Isend(col_1_temp, dest = (partner_col), tag=105)
+                newCom.Recv(col_0_temp, source = (partner_col), tag=106)
+                req4.Wait()
+
+            else : #right 
+
+                newCom.Recv(col_m1_temp, source = (partner_col), tag=103)
+                req3 = newCom.Isend(col_m2_temp, dest = (partner_col), tag=104)
+                req3.Wait()
+
+                newCom.Recv(col_0_temp, source = (partner_col), tag=105)
+                req4 = newCom.Isend(col_1_temp, dest = (partner_col), tag=106)
+                req4.Wait()
+            
+            self.cells[:,-1]= col_m1_temp
+            self.cells[:,0] = col_0_temp
+
+        """
         else :
+            #print("nbp-1 :", nbp- 1, " (nbp-1) % 2 :", (nbp-1) % 2 )
+            if newCom.rank == newCom.size - 1:
 
-            if rank == nbp - 1:
 
                 ### rows
                 mid_lig = self.dimensions_loc[1]//2
-                print("mid_lig :", mid_lig)
+                #print("mid_lig :", mid_lig)
 
                 req1 = newCom.Irecv(self.cells[-1,:mid_lig], source = 0, tag=101)
                 req2 = newCom.Irecv(self.cells[0,:mid_lig], source = (newCom.rank-2), tag=102)
@@ -187,20 +209,23 @@ class Grille:
 
                 ### rows
 
-                if rank == 0 or rank == 1: 
+                if newCom.rank == 0 or newCom.rank == 1: 
+                    #print("rank :", newCom.rank, "rank -1 :", newCom.rank -1)
 
-                    req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.rank+2)%newCom.size, tag=101)
-                    req2 = newCom.Irecv(self.cells[0,:], source = (newCom.size-1), tag=102)
-                    newCom.Send(self.cells[-2,:], dest = (newCom.rank+2)%newCom.size, tag=102)
-                    newCom.Send(self.cells[1,:], dest = (newCom.size-1), tag=101)
+                    req1 = newCom.Isend(self.cells[-2,:], source = (newCom.rank+2)%newCom.size, tag=101)
+                    req2 = newCom.Isend(self.cells[1,:], source = (newCom.size-1), tag=102)
+                    newCom.Recv(self.cells[-1,:], dest = (newCom.rank+2)%newCom.size, tag=102)
+                    newCom.Recv(self.cells[0,:], dest = (newCom.size-1), tag=101)
                 
-                elif rank == nbp - 3 or rank == nbp - 2:
+                elif newCom.rank == newCom.size - 3 or newCom.rank == newCom.size - 2:
+                    #print("rank :", newCom.rank, "rank -1 :", newCom.rank -1)
                     req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.size-1), tag=101)
                     req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank-2)%newCom.size, tag=102)
                     newCom.Send(self.cells[-2,:], dest = (newCom.size -1 ), tag=102)
                     newCom.Send(self.cells[1,:], dest = (newCom.rank-2)%newCom.size, tag=101)
                 
                 else : 
+                    #print("rank :", newCom.rank, "rank -1 :", newCom.rank -1)
                     req1 = newCom.Irecv(self.cells[-1,:], source = (newCom.rank+2)%newCom.size, tag=101)
                     req2 = newCom.Irecv(self.cells[0,:], source = (newCom.rank-2)%newCom.size, tag=102)
                     newCom.Send(self.cells[-2,:], dest = (newCom.rank+2)%newCom.size, tag=102)
@@ -208,24 +233,36 @@ class Grille:
 
                 ### cols 
 
-                if rank %2 == 0 :
-                    req3 = newCom.Irecv(np.ascontiguousarray(self.cells[:,-1]), source = (newCom.rank+1), tag=103)
-                    req4 = newCom.Irecv(np.ascontiguousarray(self.cells[:,0]), source = (newCom.rank+1), tag=104)
-                    newCom.Send(np.ascontiguousarray(self.cells[:,-2]), dest = (newCom.rank+1), tag=104)
-                    newCom.Send(np.ascontiguousarray(self.cells[:, 1]), dest = (newCom.rank+1), tag=103)
+                col_1_temp = np.ascontiguousarray(self.cells[:,-2])
+                col_m2_temp = np.ascontiguousarray(self.cells[:, 1])
+
+                if newCom.rank %2 == 0 :
+                    #print("rank :", newCom.rank, "rank + 1 :", newCom.rank + 1)
+                    req3 = newCom.Isend(col_m2_temp, dest = (newCom.rank+1), tag=104)
+                    req4 = newCom.Isend(col_1_temp, dest = (newCom.rank+1), tag=103)
+                    col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
+                    col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
+                    newCom.Recv(col_m1_temp, source = (newCom.rank+1), tag=104)
+                    newCom.Recv(col_0_temp, source = (newCom.rank+1), tag=103)
                 else : 
-                    req3 = newCom.Irecv(np.ascontiguousarray(self.cells[:,-1]), source = (newCom.rank-1), tag=103)
-                    req4 = newCom.Irecv(np.ascontiguousarray(self.cells[:,0]), source = (newCom.rank-1), tag=104)
-                    newCom.Send(np.ascontiguousarray(self.cells[:,-2]), dest = (newCom.rank-1), tag=104)
-                    newCom.Send(np.ascontiguousarray(self.cells[:, 1]), dest = (newCom.rank-1), tag=103) 
-        
+                    #print("rank :", newCom.rank, "rank -1 :", newCom.rank -1)
+                    req3 = newCom.Isend(col_m2_temp, dest = (newCom.rank-1), tag=104)
+                    req4 = newCom.Isend(col_1_temp, dest = (newCom.rank-1), tag=103)
+                    col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
+                    col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
+                    newCom.Recv(col_m1_temp, source = (newCom.rank-1), tag=104)
+                    newCom.Recv(col_0_temp, source = (newCom.rank-1), tag=103)
+
+                self.cells[:,-1]= col_m1_temp
+                self.cells[:,0] = col_0_temp
 
 
-        req1.Wait()
-        req2.Wait()
-        req3.Wait()
-        req4.Wait()
-
+        #req1.Wait()
+        #req2.Wait()
+        #req3.Wait()
+        #req4.Wait()
+        """
+    
     def modify(self, diff): 
         """
         Parameters 
@@ -237,19 +274,10 @@ class Grille:
         None
         """
         nx = self.dimensions[1]
-        cells_bef = self.cells
-        #print("Modify diff", diff)
-        #print("cells.shape :", self.cells.shape)
         for c in diff :
-            #nr = c //nx 
-            #nc = c % nx
-            nr = c[0]
-            nc = c[1] 
-            #print("self.cells[nr,nc]:",self.cells[:,nc].shape)
+            nr = c //nx 
+            nc = c % nx
             self.cells[nr,nc] = (1 - self.cells[nr,nc])
-            #print("self.cells[nr,nc] aft :",self.cells[nr,nc])
-        cells_after = self.cells 
-        #print("cells.bef == cells.after :", (cells_bef == cells_after).all())
         return None 
 
 class App:
@@ -331,8 +359,6 @@ if __name__ == '__main__':
 
 
         loop = True
-        diff = None # listes des cellules à modifier pour la prochaine itération. Initialisation sur tous les processeurs
-        count = 0 # debug
         while loop:
             globCom.send(1, dest=1)
 
@@ -353,21 +379,17 @@ if __name__ == '__main__':
         grid.update_ghost_cells()
 
         loop = True
-        count = 0
-        diff_glob = None #liste des listes des cellules à modifier par processeur.
-        if newCom.rank == 0:
-            diff_glob = []
-
-        while loop and count < 10:
+        while loop:
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
             t1 = time.time()
             diff = grid.compute_next_iteration()
-            diff = np.where(diff)# indices des cellules à modifier
-            print("diff", diff,  "grid.start_loc_row:", grid.start_loc_row, "grid.start_loc_col:", grid.start_loc_col, "rank :", rank)
+            rows, cols = np.where(diff)# indices des cellules à modifier
+            mask = (rows >= 1) & ( rows  <= grid.dimensions_loc[0]) &(cols >= 1) & ( cols  <= grid.dimensions_loc[1])
+            rows, cols = rows[mask], cols[mask]
 
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = (grid.start_loc_row+ diff[0])*grid.dim[1] + grid.start_loc_col+ diff[1]
+                diff_send = (grid.start_loc_row+ rows - 1)*grid.dimensions[1] + grid.start_loc_col+ cols - 1
             grid.update_ghost_cells() # mise à jour des cellules fantômes à chaque itération
             t2 = time.time()
 
@@ -384,6 +406,4 @@ if __name__ == '__main__':
                     else:
                         globCom.send(diff_glob, dest=0)#envois classique bloquant. Peut tenter non bloquant pour tenter d'accélerer le code, attention aux modifs possibles de la liste.
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
-            count += 1
-            #loop = False 
 

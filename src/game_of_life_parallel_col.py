@@ -47,21 +47,21 @@ class Grille:
     def __init__(self, rank : int, nbp : int, dim, init_pattern=None, color_life=pg.Color("black"), color_dead=pg.Color("white")):
         import random
         self.dimensions = dim
-        print(f"rank {rank} : dimensions globales : {self.dimensions}")
+        #print(f"rank {rank} : dimensions globales : {self.dimensions}")
         self.dimensions_loc = (dim[0],dim[1]//nbp + (1 if rank < dim[1]%nbp else 0))
         self.start_loc = rank * self.dimensions_loc[1] + (dim[1]%nbp if rank >= dim[1]%nbp else 0)
-        print(f"rank {rank} : dimensions locales : {self.dimensions_loc}, start_loc : {self.start_loc}")
+        #print(f"rank {rank} : dimensions locales : {self.dimensions_loc}, start_loc : {self.start_loc}")
 
         if init_pattern is not None:
-            print("init_pattern", init_pattern)
+            #print("init_pattern", init_pattern)
             self.cells = np.zeros((self.dimensions_loc[0],self.dimensions_loc[1]+2), dtype=np.uint16)
             indices_i = [v[0] for v in init_pattern ]
             indices_j = [v[1] - self.start_loc +1 for v in init_pattern 
                          if v[1] >= self.start_loc and v[1] < self.start_loc + self.dimensions_loc[1]]
-            print("indices_i", indices_i," indices_j", indices_j)
+            #print("indices_i", indices_i," indices_j", indices_j)
             if len(indices_j) > 0:
                 self.cells[indices_i,indices_j] = 1            
-            print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
+            #print(f"rank {rank} : Live cells :", np.where(self.cells == 1))
         else:
             self.cells = np.array(np.random.randint(2, size=dim, dtype=np.uint16))
 
@@ -85,18 +85,19 @@ class Grille:
         """
         col_1_temp = np.ascontiguousarray(self.cells[:,-2])
         col_m2_temp = np.ascontiguousarray(self.cells[:, 1])
-        #print("rank :", rank,"self.cells[:,-2] :", col_m2_temp)
-        #print("rank :", rank,"self.cells[:,1] :", col_1_temp)
+
         req1 = newCom.Isend(col_m2_temp, dest = (newCom.rank-1)%newCom.size, tag=102)
         req2 = newCom.Isend(col_1_temp, dest = (newCom.rank+1)%newCom.size, tag=101)
+
         col_m1_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
         col_0_temp = np.empty((self.dimensions_loc[0]), dtype=np.uint16)
+
         newCom.Recv(col_0_temp, source = (newCom.rank-1)%newCom.size, tag=101)
         newCom.Recv(col_m1_temp, source = (newCom.rank+1)%newCom.size, tag=102)
+
         self.cells[:,-1] = col_m1_temp
         self.cells[:,0] = col_0_temp
-        #print("rank :", rank,"self.cells[:,-1] :", col_m1_temp)
-        #print("rank :", rank,"self.cells[:,0] :", col_0_temp)
+
         req1.Wait()
         req2.Wait()
     
@@ -111,13 +112,9 @@ class Grille:
         None
         """
         nx = self.dimensions[1]
-        print("nx :", nx)
         for c in diff :
             nr = c //nx 
             nc = c % nx 
-            print("c :", c)
-            print("nr :", nr)
-            print("nc :", nc)
             self.cells[nr,nc] = (1 - self.cells[nr,nc])
         return None 
 
@@ -197,10 +194,8 @@ if __name__ == '__main__':
         appli = App((resx, resy), grid)
 
         loop = True
-        diff = None 
-        count = 0
 
-        while loop and count < 10:
+        while loop :
             globCom.send(1, dest=1)
             appli.grid.modify(globCom.recv(source=1))
             t2 = time.time()
@@ -217,22 +212,18 @@ if __name__ == '__main__':
         grid.update_ghost_cells()
 
         loop = True
-        count = 0 
-        diff_glob = None
-        if newCom.rank == 0:
-            diff_glob = []
-        while loop and count < 10:
+        while loop :
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
 
             t1 = time.time()
             diff = grid.compute_next_iteration()
-            diff = np.where(diff)
-            print("diff", diff, "grid.start_loc:", grid.start_loc, "rank :", rank)
-
+            rows, cols = np.where(diff)# indices des cellules à modifier
+            mask = (cols >= 1) & ( cols  <= grid.dimensions_loc[1])
+            rows, cols = rows[mask], cols[mask]
 
             diff_send = []
             if diff[0].shape != (0,):
-                diff_send = diff[0]*grid.dimensions[1] + diff[1] + grid.start_loc  # décalage en colonne comme on parallelise en colonne
+                diff_send = rows*grid.dimensions[1] + cols + grid.start_loc -1   # décalage en colonne comme on parallelise en colonne
             grid.update_ghost_cells()
             t2 = time.time()
 
@@ -241,7 +232,6 @@ if __name__ == '__main__':
             if newCom.rank == 0:
                 diff_index = [x for xs in diff_glob for x in xs ] # Rassemblement des indices à modifier par proc en une seule liste
                 diff_glob = np.unique(diff_index) #unique array pour éviter 
-                print("diff_glob2", diff_glob)
                 if (globCom.Iprobe(source=0)):
                     a = globCom.recv(source=0)
                     if a==-1:
@@ -249,7 +239,6 @@ if __name__ == '__main__':
                     else:
                         globCom.send(diff_glob, dest=0)
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
-            #count += 1
-            #loop = False 
+ 
 
 
