@@ -157,6 +157,8 @@ if __name__ == '__main__':
     import time
     import sys
 
+    NB_ITERS = 300  #
+
     dico_patterns = { # Dimension et pattern dans un tuple
         'blinker' : ((5,5),[(2,1),(2,2),(2,3)]),
         'toad'    : ((6,6),[(2,2),(2,3),(2,4),(3,3),(3,4),(3,5)]),
@@ -195,6 +197,71 @@ if __name__ == '__main__':
 
         loop = True
 
+        total_display_time = 0.0
+        nb_display = 0
+
+        for _ in range(NB_ITERS):
+            globCom.send(1, dest=1)
+            full_grid = globCom.recv(source=1)
+
+            if full_grid is not None:
+                appli.grid.cells[:, 1:-1] = full_grid
+
+            t2 = time.time()
+            appli.draw()
+            t3 = time.time()
+
+            display_time = t3 - t2
+            total_display_time += display_time
+        nb_display += 1
+
+        # fin des itérations
+        globCom.send(-1, dest=1)
+        pg.quit()
+
+        # moyenne finale
+        avg_display = total_display_time / nb_display
+
+        print(f"[RESULT] nbp={nbp} | avg_display={avg_display}", flush=True)
+
+        total_compute_time = 0.0
+        nb_compute = 0
+
+        for _ in range(NB_ITERS):
+
+            t1 = time.time()
+            grid.compute_next_iteration()
+            grid.update_ghost_cells()
+            t2 = time.time()
+
+            compute_time = t2 - t1
+            total_compute_time += compute_time
+            nb_compute += 1
+
+            # Communication
+            local_cols = np.ascontiguousarray(grid.cells[:, 1:-1])
+            all_cols = newCom.gather(local_cols, root=0)
+
+            if newCom.rank == 0:
+                full_grid = np.concatenate(all_cols, axis=1)
+                a = globCom.recv(source=0)
+
+                if a == -1:
+                    break
+                else:
+                    globCom.send(full_grid, dest=0)
+
+        # moyenne locale
+        avg_compute = total_compute_time / nb_compute
+
+        # moyenne entre tous les processus de calcul
+        sum_avg = newCom.reduce(avg_compute, op=MPI.SUM, root=0)
+
+        if newCom.rank == 0:
+            avg_compute_global = sum_avg / newCom.size
+            print(f"[RESULT] nbp={nbp} | avg_compute={avg_compute_global}", flush=True)
+
+"""""
         while loop :
             globCom.send(1, dest=1)
             full_grid = globCom.recv(source=1)
@@ -212,7 +279,6 @@ if __name__ == '__main__':
     else:
         grid = Grille(newCom.rank, newCom.size, *init_pattern)
         grid.update_ghost_cells()
-
         loop = True
         while loop :
             time.sleep(0.1) # A régler ou commenter pour vitesse maxi
@@ -235,3 +301,6 @@ if __name__ == '__main__':
                     else:
                         globCom.send(full_grid, dest=0)
             print(f"Temps calcul prochaine generation : {t2-t1:2.2e} secondes", flush=True)
+            
+"""
+
