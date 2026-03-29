@@ -79,7 +79,7 @@ cal_ligne montre des fluctuations importantes
 cal_col est globalement stable et performant
 
 Temps moyen de calcul
-<p align="center"> <img src="picture/calc_moyen.png" width="300"> </p>
+<p align="center"> <img src="picture/Calc_moyen.png" width="300"> </p>
 
 
 
