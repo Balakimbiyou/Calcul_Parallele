@@ -69,7 +69,7 @@ Comparer différentes stratégies de calcul parallèle afin d’évaluer :
 
 Résultats
 Temps maximal de calcul
-<p align="center"> <img src="picture/calc_max.png" width="600"> </p>
+<p align="center"> <img src="picture/calc_max.png" width="300"> </p>
 
 ##### Analyse des courbes :
 
@@ -79,7 +79,7 @@ cal_ligne montre des fluctuations importantes
 cal_col est globalement stable et performant
 
 Temps moyen de calcul
-<p align="center"> <img src="picture/calc_moyen.png" width="600"> </p>
+<p align="center"> <img src="picture/calc_moyen.png" width="300"> </p>
 
 
 
