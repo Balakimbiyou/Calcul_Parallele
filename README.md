@@ -54,8 +54,6 @@ Dans le cas où le nombre de processeurs calculateurs est impair, le dernier pro
 
 ## Tests
 
-Indiquer les caractéristiques de la machine sur laquelle les tests sont lancés (nom, marque, nombre de processeurs).
-
 ### SpeedUp
 
 Speedup = Temps séquentiel / Temps parallèle(n_processeurs)
@@ -88,4 +86,18 @@ cal_bloc reste moins efficace
 Une limite apparaît avec l’augmentation du nombre de processus (overhead)
 
 
-### Consommation mémoire
+### Consommation mémoire 
+
+Les tests de consommation mémoire ont été réalisé sur un ASUS Vivobook 15 avec 16 g de Ram. 
+
+Consommation mémoire avec 3 threads pour l'implémentation parallèle par blocks
+<p align="center"> <img src="picture/Blocks/Proc_3threads.png" width="600"> </p>
+
+
+Consommation mémoire avec 7 threads pour l'implémentation parallèle par blocks
+<p align="center"> <img src="picture/Blocks/Proc_7threads.png" width="600"> </p>
+
+Le processeur 0 consomme plue de mémoires que les autres car il détient la grille entière et ainsi que la fenêtre qui gère l'affichage d'écran. 
+La mémoire consommée par threads est constante malgrés le fait que la taille des grilles décroit avec l'augmentation du nombre de threads. 
+Ce qui n'est pas très optimal. 
+La consommation mémoire est identique pour les implémentation lignes et colonnes.  

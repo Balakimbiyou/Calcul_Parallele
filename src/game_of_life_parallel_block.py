@@ -98,7 +98,7 @@ class Grille:
                 self.start_loc_col = 0
             
 
-        print(f"rank {rank} : dimensions locales : {self.dimensions_loc}, start_loc_row : {self.start_loc_row}, star_loc_col : {self.start_loc_col}")
+        #print(f"rank {rank} : dimensions locales : {self.dimensions_loc}, start_loc_row : {self.start_loc_row}, star_loc_col : {self.start_loc_col}")
 
         if init_pattern is not None:
             #print("init_pattern", init_pattern)
@@ -398,7 +398,7 @@ if __name__ == '__main__':
             if newCom.rank == 0:
                 diff_index = [x for xs in diff_glob for x in xs ] # Rassemblement des indices à modifier par proc en une seule liste
                 diff_glob = np.unique(diff_index) #unique array pour éviter 
-                print("diff_glob2", diff_glob)
+                #print("diff_glob2", diff_glob)
                 if (globCom.Iprobe(source=0)):
                     a = globCom.recv(source=0) 
                     if a==-1:
