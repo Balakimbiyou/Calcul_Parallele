@@ -60,4 +60,33 @@ Indiquer les caractéristiques de la machine sur laquelle les tests sont lancés
 
 Speedup = Temps séquentiel / Temps parallèle(n_processeurs)
 
+##### Objectifs
+Comparer différentes stratégies de calcul parallèle afin d’évaluer :
+
+leur efficacité
+leur scalabilité
+leur impact sur le temps d’exécution
+
+Résultats
+Temps maximal de calcul
+<p align="center"> <img src="images/calc_max.png" width="600"> </p>
+
+##### Analyse des courbes :
+
+Le speedup diminue avec l’augmentation du nombre de processus (comportement attendu)
+cal_bloc reste stable mais peu performant
+cal_ligne montre des fluctuations importantes
+cal_col est globalement stable et performant
+
+Temps moyen de calcul
+<p align="center"> <img src="images/calc_moyen.png" width="600"> </p>
+
+
+
+Les temps moyens sont globalement plus faibles
+cal_col et cal_ligne offrent de bonnes performances
+cal_bloc reste moins efficace
+Une limite apparaît avec l’augmentation du nombre de processus (overhead)
+
+
 ### Consommation mémoire
